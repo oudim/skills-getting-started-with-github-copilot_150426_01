@@ -20,14 +20,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Participants section
+
+        let participantsSection = '';
+        if (details.participants && details.participants.length > 0) {
+          participantsSection = `
+            <ul class="participants-list">
+              ${details.participants.map(p => `
+                <li class="participant-item">
+                  <span class="participant-name">${p}</span>
+                  <button class="delete-participant" title="Désinscrire" data-activity="${encodeURIComponent(name)}" data-email="${encodeURIComponent(p)}">
+                    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="10" cy="10" r="10" fill="#f44336"/>
+                      <path d="M6 6l8 8M14 6l-8 8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                </li>
+              `).join("")}
+            </ul>
+          `;
+        } else {
+          participantsSection = `<p class="no-participants">Aucun participant pour l'instant.</p>`;
+        }
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants">
+            <span class="participants-label">Participants :</span>
+            ${participantsSection}
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
+
+      // Ajout des listeners pour les boutons de suppression
+      setTimeout(() => {
+        document.querySelectorAll('.delete-participant').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const activity = decodeURIComponent(btn.getAttribute('data-activity'));
+            const email = decodeURIComponent(btn.getAttribute('data-email'));
+            try {
+              const response = await fetch(`/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`, {
+                method: 'DELETE',
+              });
+              if (response.ok) {
+                fetchActivities();
+              } else {
+                alert("Impossible de désinscrire ce participant.");
+              }
+            } catch (err) {
+              alert("Erreur réseau lors de la désinscription.");
+            }
+          });
+        });
+      }, 0);
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -62,6 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities(); // Rafraîchir la liste après inscription
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
